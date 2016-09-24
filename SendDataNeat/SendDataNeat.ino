@@ -1,10 +1,26 @@
+//FreeRtos bitch
+#include <Arduino_FreeRTOS.h>
+#include <croutine.h>
+#include <event_groups.h>
+#include <FreeRTOSConfig.h>
+#include <FreeRTOSVariant.h>
+#include <list.h>
+#include <mpu_wrappers.h>
+#include <portable.h>
+#include <portmacro.h>
+#include <projdefs.h>
+#include <queue.h>
+#include <semphr.h>
+#include <StackMacros.h>
+#include <task.h>
+#include <timers.h>
+
 //CUSTOM LIBRARIES
 #include <UltrasoundLibrary.h>
 #include <CompassLibrary.h>
 #include <HandshakeLibrary.h>
 
 //GENERAL LIBRARIES
-#include <smartTimer.h>
 #include <string.h>
 #include <Wire.h>
 #include <L3G.h>
@@ -30,9 +46,6 @@ long distance4,distance5,distance6,distance7;
 //Handshake
 HandshakeLibrary HLB;
 
-//timer
-CSmartTimer *timer;
-//end of timer
 
 //compass
 CompassLibrary CLB;
@@ -41,7 +54,7 @@ float headings;
 
 //serialise
 unsigned len;
-char buffer[512];
+char buffer[50];
 //end of serialise
 
 //infared
@@ -52,10 +65,11 @@ float sensorValue = 0;
 //pedo
 L3G gyro;
 int steps, flag = 0;
+#define PEDOSIZE 1
 
-float xval[100] = {0};
-float yval[100] = {0};
-float zval[100] = {0};
+float xval[PEDOSIZE] = {0};
+float yval[PEDOSIZE] = {0};
+float zval[PEDOSIZE] = {0};
 
 float xavg;
 float yavg;
@@ -157,7 +171,7 @@ void calibratePedo() {
   float sumX = 0;
   float sumY = 0;
   float sumZ = 0;
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < PEDOSIZE; i++) {
     gyro.read();
     xval[i] = gyro.g.x;
     yval[i] = gyro.g.y;
@@ -183,12 +197,12 @@ void rawDataPedo() {
   float threshhold = 6000.0;
 
 
-  float totvect[100] = {0};
-  float totave[100] = {0};
-  float xaccl[100] = {0};
-  float yaccl[100] = {0};
-  float zaccl[100] = {0};
-  for (int i = 0; i < 100; i++) {
+  float totvect[PEDOSIZE] = {0};
+  float totave[PEDOSIZE] = {0};
+  float xaccl[PEDOSIZE] = {0};
+  float yaccl[PEDOSIZE] = {0};
+  float zaccl[PEDOSIZE] = {0};
+  for (int i = 0; i < PEDOSIZE; i++) {
     gyro.read();
     xaccl[i] = float(gyro.g.x);
     yaccl[i] = float(gyro.g.y);
@@ -217,18 +231,19 @@ void rawDataPedo() {
   //CHANGE THIS TO CALCULATE FASTER EG WALKING FASTER
   //If delay too fast, prone to calculate even shakes.
   //If delay to slow, cannot calculate speed fast enough
-  delay(1300);
+  //delay(1300);
   flag = 0;
 
 }
 
 void formatInfoToSend() {
 
-  rawDataPedo();
-
-  //READ COMPASS @ CompassLibrary.cpp
-  CLB.readCompass();
-  headings = CLB.headings;
+  rawDataPedo();//kills freertos
+//
+//  //READ COMPASS @ CompassLibrary.cpp
+    Serial.println("Reading compass");
+    CLB.readCompass();
+    headings = CLB.headings;
   Serial.print("compass new:");
   Serial.println(headings);
 
@@ -236,6 +251,7 @@ void formatInfoToSend() {
   distance5 = ULB.readUltrasound(trigPin5, echoPin5);
   distance6 = ULB.readUltrasound(trigPin6, echoPin6);
   distance7 = ULB.readUltrasound(trigPin7, echoPin7);
+  Serial.println("Ultrasound Complete reading");
   
   rawDataInfared();
   sendConfig();
@@ -256,45 +272,93 @@ void formatInfoToSend() {
   Serial.println(calibrated);
 }
 
+
+void taskReadAndTransmit(void *pvParameters);
+//void taskDummy(void *pvParameters);
+
 void setup() {
 
   Serial1.begin(9600);
   Serial.begin(9600);
+
+  //HANDSHAKE
+  HLB.executeHandshake();
+  //Initialise various sensors
   Wire.begin();
   //ultra
   ULB.ultrasoundInit();
   //compass
   CLB.compassInit();
-
   //pedo
   gyro.init();
   gyro.enableDefault();
   calibratePedo();
-
-  //timer
-  //  timer = new CSmartTimer(STIMER1);
-  //  timer->attachCallback(formatInfoToSend, 3000); //100ms
-  //
-  //  timer->startTimer();
+//TASKS
+  xTaskCreate(
+    taskReadAndTransmit,
+    (const portCHAR *) "Read And Transmit",
+    128,
+    NULL,
+    1,
+    NULL
+    );
+//  xTaskCreate(
+//    taskDummy,
+//    (const portCHAR *) "Dummy",
+//    128,
+//    NULL,
+//    2,
+//    NULL
+//  );
 }
 
 void loop() {
 
-  HLB.executeHandshake();
-  while (1) {
-    formatInfoToSend();
+    //while(1);
+  }
+  
+void taskReadAndTransmit(void *pvParameters){
+  (void)pvParameters;
+    while(1){
+      Serial.println("task reached");
+      formatInfoToSend();
     if (Serial1.available()) {
       int ack = Serial1.read();
       if(ack == '1'){
         Serial.println("Transmission Successful");
       }else if(ack == '0'){
-        while(ack == '0')
+        while(ack == '0'){
         Serial.println("Transmission Unsuccessful");
         Serial.println("Retransmitting..");
         sendSerialData(buffer, len);
-      }
-    }
-    delay(2000);
-    //while(1);
+      } 
+    }  
   }
+  //int memory = availableMemory();
+  //Serial.print("RAM left: ");
+  //Serial.println(memory);
+  vTaskDelay(100);
+ }
 }
+
+//int availableMemory(){
+//  int size = 2048; // Use 2048 with ATmega328
+//  byte *buf;
+//
+//  while ((buf = (byte *) malloc(--size)) == NULL)
+//    ;
+//
+//  free(buf);
+//
+//  return size;
+//}
+
+//void taskDummy(void *pvParameters)  // This is a task.
+//{
+//  (void) pvParameters;
+//  for (;;) // A Task shall never return or exit.
+//  {
+//    Serial.println("I'm fucking dumb");
+//    vTaskDelay(1000); // wait for one second
+//  }
+//}
