@@ -6,7 +6,10 @@
 class UltrasoundLibrary
 {
   public:
-	long readUltrasound(int trigPin, int echoPin);
+	long readUltrasoundLeft(int trigPin, int echoPin);
+	long readUltrasoundRight(int trigPin, int echoPin);
+	long readUltrasoundCenter(int trigPin, int echoPin);
+	long readUltrasoundBottom(int trigPin, int echoPin);
 	void ultrasoundInit();
     
 };

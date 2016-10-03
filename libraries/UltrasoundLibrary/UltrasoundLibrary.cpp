@@ -10,10 +10,21 @@
 #define echoPin7 28 // Echo Pin
 #define trigPin7 29 // Trigger Pin
 
-int maximumRange = 200, minimumRange = 3;
+int maximumRangeLeft = 200;
+int minimumRangeLeft = 30;
+
+int maximumRangeRight = 200;
+int minimumRangeRight = 30;
+
+int maximumRangeCenter = 200;
+int minimumRangeCenter = 60;
+
+int maximumRangeBottom = 200;
+int minimumRangeBottom = 45;
+
 long duration, distance;
 
-long UltrasoundLibrary::readUltrasound(int trigPin, int echoPin)
+long UltrasoundLibrary::readUltrasoundLeft(int trigPin, int echoPin)
 {
   /* The following trigPin/echoPin cycle is used to determine the
     distance of the nearest object by bouncing soundwaves off of it. */
@@ -30,15 +41,109 @@ long UltrasoundLibrary::readUltrasound(int trigPin, int echoPin)
   //Calculate the distance (in cm) based on the speed of sound.
   distance = duration / 58.2;
 
-  if (distance >= maximumRange || distance <= minimumRange) {
+  if (distance <= minimumRangeLeft) {
   
   /* Send a negative number to computer and Turn LED ON
     to indicate "out of range" */
 	
   distance = -1;
   }
+  else if (distance >= maximumRangeLeft) {
+  distance = -2;
+}
   return distance;
 }
+
+long UltrasoundLibrary::readUltrasoundRight(int trigPin, int echoPin)
+{
+  /* The following trigPin/echoPin cycle is used to determine the
+    distance of the nearest object by bouncing soundwaves off of it. */
+	
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+
+  //Calculate the distance (in cm) based on the speed of sound.
+  distance = duration / 58.2;
+
+  if (distance <= minimumRangeRight) {
+  
+  /* Send a negative number to computer and Turn LED ON
+    to indicate "out of range" */
+	
+  distance = -1;
+  }
+  else if (distance >= maximumRangeRight) {
+  distance = -2;
+}
+  return distance;
+}
+
+long UltrasoundLibrary::readUltrasoundCenter(int trigPin, int echoPin)
+{
+  /* The following trigPin/echoPin cycle is used to determine the
+    distance of the nearest object by bouncing soundwaves off of it. */
+	
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+
+  //Calculate the distance (in cm) based on the speed of sound.
+  distance = duration / 58.2;
+
+  if (distance <= minimumRangeCenter) {
+  
+  /* Send a negative number to computer and Turn LED ON
+    to indicate "out of range" */
+	
+  distance = -1;
+  }
+  else if (distance >= maximumRangeCenter) {
+  distance = -2;
+}
+  return distance;
+}
+
+long UltrasoundLibrary::readUltrasoundBottom(int trigPin, int echoPin)
+{
+  /* The following trigPin/echoPin cycle is used to determine the
+    distance of the nearest object by bouncing soundwaves off of it. */
+	
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+
+  //Calculate the distance (in cm) based on the speed of sound.
+  distance = duration / 58.2;
+
+  if (distance <= minimumRangeBottom) {
+  
+  /* Send a negative number to computer and Turn LED ON
+    to indicate "out of range" */
+	
+  distance = -1;
+  }
+  else if (distance >= maximumRangeBottom) {
+  distance = -2;
+}
+  return distance;
+}
+
 
 void UltrasoundLibrary::ultrasoundInit(){
   pinMode(trigPin4, OUTPUT);
